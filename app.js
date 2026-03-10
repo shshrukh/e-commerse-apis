@@ -8,6 +8,7 @@ import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 import { productRoute } from "./src/routes/product.route.js";
 import { adminRoute } from "./src/routes/admin.route.js";
+import "./src/events/index.js"; // Initialize event listeners
 
 
 dotenv.config();

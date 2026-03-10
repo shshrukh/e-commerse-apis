@@ -41,7 +41,8 @@ const userSchema = new Schema({
         {
             token: {
                 type: String,
-                default: null
+                default: null,
+                select: false
             },
             createdAt: {
                 type: Date,
