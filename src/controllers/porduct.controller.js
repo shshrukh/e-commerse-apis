@@ -1,11 +1,9 @@
+import { success } from "zod";
 import AsyncHandler from "../handlers/AsyncHandler.js";
 import CustomError from "../handlers/CustomError.js";
 import Category from "../models/category.model.js";
 import { Product } from "../models/product.model.js";
 import mongoose from "mongoose";
-import { ApiFeatures } from "../utils/ApiFeatures.js";
-import { ensureSlug } from "../utils/makingSlug.js";
-import User from "../models/user.models.js";
 
 
 
@@ -19,7 +17,7 @@ const createProduct = AsyncHandler(async (req, res, next) => {
 
     const product = await Product.create({ name, price, stock, user: user.id, category, isActive });
     if (!product) {
-        return next(new CustomError(500, "failed to create passowrd"))
+        return next(new CustomError(500, "failed to create product"))
     };
 
     res.status(201).json({
@@ -61,13 +59,44 @@ const createCategory = AsyncHandler(async (req, res, next) => {
 });
 
 
-//@ get admin products
-
-const adminCreatedProducts = AsyncHandler(async(req, res, next)=>{
+//@ get all admin products
+const getAllAdminProducts = AsyncHandler(async(req, res, next)=>{
     const user = req.user;
+    const products = await Product.find({ user: user._id })
+        .select("-user -__v -_id -category -createdAt -updatedAt");
+        
+    res.status(200).json({
+        success: true,
+        message: 'procucts are fetch successfully',
+        products
+    })
+});
 
+
+//@ edit product deals
+
+const editProductDeals = AsyncHandler(async(req, res, next)=>{
+    const { discount, startDate, endDate} = req.body;
+    const user = req.user;
+    const productId = req.query.id;
+
+
+    // find the product using the id in req.qurry
+
+    const product = await Product.findById(productId);
+    if(!product){
+        return next( CustomError(404, 'product not found'));
+    }
+
+    await product.save()
+    
+    res.status(200).json({
+        success: true,
+        message: 'deal is created successfully'
+    })
     
 });
 
 
-export { createProduct, createCategory }
+
+export { createProduct, createCategory, getAllAdminProducts, editProductDeals }

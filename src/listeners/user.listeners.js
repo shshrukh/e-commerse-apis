@@ -9,9 +9,9 @@ eventBus.on(UserEvents.REGISTER, async(user)=>{
     try {
         const html = confirmRegistration(user.name, user.email, user.verificationToken);
         await sendEmail(user.email, "User Registration Successful",html);
-        console.log(user.email);
+        console.log(`Email sent successfully to ${user.email}`);
         
     } catch (error) {
-        eventBus.error('Error form event bus', error)
+        console.error('Error sending registration email:', error)
     }
 });

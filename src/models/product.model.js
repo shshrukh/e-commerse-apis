@@ -17,6 +17,12 @@ const productSchema = new Schema({
         type: Number,
         required: true
     },
+    deals:{
+            user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+            discount: { type: Number, default: 0},
+            startedDate: { type: Number, default: Date.now()},
+            endDate: { type: Date}
+        },
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
