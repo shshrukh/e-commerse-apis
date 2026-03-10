@@ -1,6 +1,7 @@
+import express from 'express';
 import * as z from 'zod';
 
-const createProductSchema = z.object({
+const createProductDealSchema = z.object({
      name: z.string().trim().min(3, "Product name should have at least 3 characters"),
         price: z.number(),
         stock: z.number(),
@@ -15,3 +16,6 @@ const createProductSchema = z.object({
             })
         )
 });
+
+
+export {createProductDealSchema}

@@ -73,12 +73,30 @@ const getAllAdminProducts = AsyncHandler(async(req, res, next)=>{
 });
 
 
-//@ create product deals
+//@ edit product deals
 
-const createProductDeals = AsyncHandler(async(req, res, next)=>{
+const editProductDeals = AsyncHandler(async(req, res, next)=>{
+    const { discount, startDate, endDate} = req.body;
+    const user = req.user;
+    const productId = req.query.id;
+
+
+    // find the product using the id in req.qurry
+
+    const product = await Product.findById(productId);
+    if(!product){
+        return next( CustomError(404, 'product not found'));
+    }
+
+    await product.save()
+    
+    res.status(200).json({
+        success: true,
+        message: 'deal is created successfully'
+    })
     
 });
 
 
 
-export { createProduct, createCategory, getAllAdminProducts }
+export { createProduct, createCategory, getAllAdminProducts, editProductDeals }
