@@ -4,6 +4,7 @@ import CustomError from "../handlers/CustomError.js";
 import Category from "../models/category.model.js";
 import { Product } from "../models/product.model.js";
 import mongoose from "mongoose";
+import { Deal } from "../models/deals.model.js";
 
 
 
@@ -12,9 +13,11 @@ import mongoose from "mongoose";
 
 
 const createProduct = AsyncHandler(async (req, res, next) => {
-    const { name, price, stock, category, isActive } = req.body;
+    const { name, price, stock, category, isActive ,deals} = req.body;
     const user = req.user;
-
+    if(deals){
+        const product = await Product.create({ name, price, stock, user: user.id, category, isActive });
+    }
     const product = await Product.create({ name, price, stock, user: user.id, category, isActive });
     if (!product) {
         return next(new CustomError(500, "failed to create product"))
@@ -73,30 +76,38 @@ const getAllAdminProducts = AsyncHandler(async(req, res, next)=>{
 });
 
 
-//@ edit product deals
+//@ create deals
 
-const editProductDeals = AsyncHandler(async(req, res, next)=>{
+const createDeal = AsyncHandler(async(req, res, next)=>{
     const { discount, startDate, endDate} = req.body;
     const user = req.user;
-    const productId = req.query.id;
+    const productId = req.params.id;
 
+    console.log(productId,"this is product mongodb id");    // cheking the product ID;
 
-    // find the product using the id in req.qurry
-
-    const product = await Product.findById(productId);
-    if(!product){
-        return next( CustomError(404, 'product not found'));
+    const existingDeal = await Deal.findOne({ product: productId});
+    if(existingDeal){
+        return res.status(400).json({
+            success: false,
+            message: "deal is all ready createdA deal for this product already exists. You can edit it instead."
+        })
     }
 
-    await product.save()
-    
+    const product = Product.findById(productId);
+    if(!product){
+        return next( new CustomError(404, "product not found"));
+    }
+
+    const deal = await Deal.create({discount, startDate, endDate, user: user._id, product: productId});
+
     res.status(200).json({
         success: true,
-        message: 'deal is created successfully'
+        message: " deal is created successfuly",
+        deal
     })
-    
+     
 });
 
 
 
-export { createProduct, createCategory, getAllAdminProducts, editProductDeals }
+export { createProduct, createCategory, getAllAdminProducts, createDeal}
