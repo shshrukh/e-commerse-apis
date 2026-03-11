@@ -1,4 +1,4 @@
-import mongoose, {Schema, model} from "mongoose";
+import mongoose, { Schema, model } from "mongoose";
 
 
 const productSchema = new Schema({
@@ -17,12 +17,6 @@ const productSchema = new Schema({
         type: Number,
         required: true
     },
-    deals:{
-            user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-            discount: { type: Number, default: 0},
-            startedDate: { type: Number, default: Date.now()},
-            endDate: { type: Date}
-        },
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
@@ -32,16 +26,16 @@ const productSchema = new Schema({
         type: Boolean,
         default: true
     },
-    category:{
+    category: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Category",
         required: true
     }
-},{timestamps: true})
+}, { timestamps: true })
 
-productSchema.index({name: 1});
-productSchema.index({category: 1});
-productSchema.index({user: 1});
-productSchema.index({price: 1});
+productSchema.index({ name: 1 });
+productSchema.index({ category: 1 });
+productSchema.index({ user: 1 });
+productSchema.index({ price: 1 });
 
 export const Product = model("Product", productSchema);
