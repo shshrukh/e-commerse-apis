@@ -23,6 +23,13 @@ const userSchema = new Schema({
         minLength: [8, "Password must be at least 8 characters long"],
         select: false
     },
+    avatar: {
+        type: {
+            url: String,
+            public_id: String
+        },
+        default: null
+    },
     contactNumber: {
         type: String,
         required: true,
@@ -58,11 +65,11 @@ const userSchema = new Schema({
         type: Date,
         default: null
     },
-    addresses:[
+    addresses: [
         {
-            city: {type: String, required: true, trim: true},
-            country: {type: String, required: true, trim: true},
-            zip: {type: Number, required: true, trim: true}
+            city: { type: String, required: true, trim: true },
+            country: { type: String, required: true, trim: true },
+            zip: { type: Number, required: true, trim: true }
         }
     ]
 }, { timestamps: true });

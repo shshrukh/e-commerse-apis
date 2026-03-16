@@ -5,7 +5,8 @@ import User from "../models/user.models.js";
 
 
 const authMiddleware = AsyncHandler(async (req, res, next) => {
-
+   
+    
     const authHeader = req.headers.authorization;
     const token = authHeader?.startsWith("Bearer ")?authHeader.slice(7): null;
     
@@ -32,6 +33,8 @@ const authMiddleware = AsyncHandler(async (req, res, next) => {
     
     req.user = user;
     req.role = user.role;
+    
+    
     next();
 });
 
