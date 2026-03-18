@@ -1,6 +1,5 @@
 const validateZodSchema = (schema) => {
     return (req, res, next)=>{
-        console.log(req.body);
         
         if(!req.body  || Object.keys(req.body).length === 0){
             return res.status(400).json({

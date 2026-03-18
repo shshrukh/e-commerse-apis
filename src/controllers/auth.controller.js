@@ -7,16 +7,19 @@ import { generateAccessToken, generateRefreshToken } from "../utils/generateToke
 
 
 const loginUser = AsyncHandler(async(req, res, next)=>{
+    
     const {email, password} = req.body;
     
     const user = await User.findOne({email}).select("+password");
+    console.log(user);
+    
     if(!user){
         return next(new CustomError(404, "user not found with this email"));
     }
     if(!user.isVerified){
         return next(new CustomError(403, "Account not verified. Please verify your email."))
     }
-
+    
     const isPasswordMatched = await user.comparePassword(password);
     
     if(!isPasswordMatched){

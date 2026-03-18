@@ -9,6 +9,7 @@ import cookieParser from "cookie-parser";
 import { productRoute } from "./src/routes/product.route.js";
 import { adminRoute } from "./src/routes/admin.route.js";
 import "./src/events/index.js"; // Initialize event listeners
+import multer from "multer";
 
 
 dotenv.config();
@@ -86,7 +87,18 @@ app.use('/api/v1/porduct', productRoute);
 app.use('/api/v1/admin', adminRoute)
 
 
+// multer middleware";
 
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({
+      success: false,
+      message: err.message,
+    });
+  }
+
+  next(err);
+});
 
 //implementing the error middleware
 app.use(ErrorMiddleware);
