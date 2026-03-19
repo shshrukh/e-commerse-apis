@@ -24,7 +24,6 @@ const registerUser = AsyncHandler(async (req, res, next) => {
     const verificationToken = crypto.randomBytes(20).toString("hex");
     const verificationTokenExpiry = Date.now() + 15 * 60 * 1000; // 15 mints
 
-
     const user = await User.create({
         name, email, password, contactNumber, addresses, verificationToken, verificationTokenExpiry,
     });
@@ -76,7 +75,6 @@ const verifyEmail = AsyncHandler(async (req, res, next) => {
 const addProfile = AsyncHandler(async (req, res, next) => {
     const file = req.file;
     const user = req.user;
-    console.log("working abcabcbac");
     
     const detectedType = await fileTypeFromBuffer(file.buffer);
 
@@ -103,7 +101,7 @@ const addProfile = AsyncHandler(async (req, res, next) => {
         }
     }
 
-    const updatedUser = await User.findOneAndReplace(
+    const updatedUser = await User.findByIdAndUpdate(
         user._id,
         {
             avatar: {
@@ -111,7 +109,8 @@ const addProfile = AsyncHandler(async (req, res, next) => {
                 public_id: result.public_id,
             },
         },
-        { new: true }
+        { returnDocument: 'after', runValidators: true }
+        
     );
 
     if (!updatedUser) {
