@@ -30,6 +30,11 @@ const productSchema = new Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Category",
         required: true
+    },
+    activeDeal: {
+        type: mongoose.Types.ObjectId,
+        ref: "Deal",
+        default: null
     }
 }, { timestamps: true })
 
@@ -37,5 +42,6 @@ productSchema.index({ name: 1 });
 productSchema.index({ category: 1 });
 productSchema.index({ user: 1 });
 productSchema.index({ price: 1 });
+productSchema.index({ activeDeal: 1});
 
 export const Product = model("Product", productSchema);

@@ -63,18 +63,22 @@ const createCategory = AsyncHandler(async (req, res, next) => {
 
 
 //@ get all admin products
-const getAllAdminProducts = AsyncHandler(async (req, res, next) => {
+const getAllAdminProducts = AsyncHandler(async (req, res) => {
     const user = req.user;
+
     const products = await Product.find({ user: user._id })
-        .select("-user -__v -_id -category -createdAt -updatedAt");
+        .select("name price stock isActive activeDeal") // include only these
+        .populate({
+            path: "activeDeal",
+            select: "discount startDate endDate user"
+        });
 
     res.status(200).json({
         success: true,
-        message: 'procucts are fetch successfully',
+        message: "Products fetched successfully",
         products
-    })
+    });
 });
-
 
 //@ create deals
 
@@ -85,7 +89,7 @@ const createDeal = AsyncHandler(async (req, res, next) => {
 
     // console.log(productId,"this is product mongodb id");    // cheking the product ID;
 
-    const product = Product.findById(productId);
+    const product = await Product.findById(productId);
     if (!product) {
         return next(new CustomError(404, "product not found"));
     }
@@ -93,11 +97,15 @@ const createDeal = AsyncHandler(async (req, res, next) => {
     if (existingDeal) {
         return res.status(400).json({
             success: false,
-            message: "deal is all ready createdA deal for this product already exists. You can edit it instead."
+            message: "deal is allready created. Deal for this product already exists. You can edit it instead."
         })
     }
 
     const deal = await Deal.create({ discount, startDate, endDate, user: user._id, product: productId });
+    if(!deal){
+        return next(new CustomError(404, "deal is not created"));
+    }
+    await Product.findByIdAndUpdate(productId,{activeDeal: deal._id});
 
     res.status(200).json({
         success: true,
@@ -114,7 +122,7 @@ const editDeals = AsyncHandler(async (req, res, next) => {
     const { discount, startDate, endDate } = req.body;
     const product = await Product.findById(productId);
     if (!product) {
-        return next(CustomError(404, 'product not exists'));
+        return next(new CustomError(404, 'product not exists'));
     }
     const deal = await Deal.findOneAndUpdate(
         { product: productId },               // filter → find the deal by product
@@ -125,17 +133,51 @@ const editDeals = AsyncHandler(async (req, res, next) => {
         }
     );
     if (!deal) {
-        return next(CustomError(404, "Deal not found for this product. Create it first."));
+        return next(new CustomError(404, "Deal not found for this product. Create it first."));
     }
 
     return res.status(200).json({
         success: true,
         message: " deal is created successfuly",
     })
+});
 
+
+//@ edit product 
+
+const editProduct = AsyncHandler(async(req, res, next)=>{
+    const productId = req.params.id;
+    const {name, price, stoke, isActive, category} = req.body;
+    const product = await Product.findByIdAndUpdate(productId, {name, price, stoke, isActive, category},{returnDocument: "after", runValidators: true});
+
+    if(!product){
+        return next(new CustomError(404, "Failed to update the product"))
+    }
+    res.status(200).json({
+        success: true,
+        message: 'product is updated successfully.'
+    })
+});
+
+// @ delete product
+const deleteProduct = AsyncHandler(async(req, res, next)=>{
+    const productId = req.params.id;
+    const product = await Product.findById(productId);
+    if(!product){
+        return next(new CustomError(404, "can't find the product"));
+    }
+    if(product.activeDeal){
+        await Deal.findByIdAndDelete(product.activeDeal)
+    }
+    await Product.findByIdAndDelete(productId);
     
+
+    res.status(204).json({
+        success: true,
+        message: "product is deleted sucessfuly"
+    })
     
 });
 
 
-export { createProduct, createCategory, getAllAdminProducts, createDeal, editDeals }
+export { createProduct, createCategory, getAllAdminProducts, createDeal, editDeals, editProduct, deleteProduct }
