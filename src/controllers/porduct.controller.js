@@ -102,10 +102,10 @@ const createDeal = AsyncHandler(async (req, res, next) => {
     }
 
     const deal = await Deal.create({ discount, startDate, endDate, user: user._id, product: productId });
-    if(!deal){
+    if (!deal) {
         return next(new CustomError(404, "deal is not created"));
     }
-    await Product.findByIdAndUpdate(productId,{activeDeal: deal._id});
+    await Product.findByIdAndUpdate(productId, { activeDeal: deal._id });
 
     res.status(200).json({
         success: true,
@@ -145,12 +145,12 @@ const editDeals = AsyncHandler(async (req, res, next) => {
 
 //@ edit product 
 
-const editProduct = AsyncHandler(async(req, res, next)=>{
+const editProduct = AsyncHandler(async (req, res, next) => {
     const productId = req.params.id;
-    const {name, price, stoke, isActive, category} = req.body;
-    const product = await Product.findByIdAndUpdate(productId, {name, price, stoke, isActive, category},{returnDocument: "after", runValidators: true});
+    const { name, price, stoke, isActive, category } = req.body;
+    const product = await Product.findByIdAndUpdate(productId, { name, price, stoke, isActive, category }, { returnDocument: "after", runValidators: true });
 
-    if(!product){
+    if (!product) {
         return next(new CustomError(404, "Failed to update the product"))
     }
     res.status(200).json({
@@ -160,24 +160,47 @@ const editProduct = AsyncHandler(async(req, res, next)=>{
 });
 
 // @ delete product
-const deleteProduct = AsyncHandler(async(req, res, next)=>{
+const deleteProduct = AsyncHandler(async (req, res, next) => {
     const productId = req.params.id;
     const product = await Product.findById(productId);
-    if(!product){
+    if (!product) {
         return next(new CustomError(404, "can't find the product"));
     }
-    if(product.activeDeal){
+    if (product.activeDeal) {
         await Deal.findByIdAndDelete(product.activeDeal)
     }
     await Product.findByIdAndDelete(productId);
-    
+
 
     res.status(204).json({
         success: true,
         message: "product is deleted sucessfuly"
     })
-    
+
+});
+
+//@ eidt category 
+const editCategory = AsyncHandler(async (req, res, next) => {
+    const { name, slug } = req.body;
+    const id = req.params.id;
+
+    const updatedParentCategory = await Category.findByIdAndUpdate(
+        id,
+        { name, slug , parentCategoryId: id, createdBy: user._id},
+        { new: true }
+    );
+
+    if (!updatedParentCategory) {
+        return next(new CustomError(404, "can't find the parent category"));
+    }
+
+    res.status(200).json({
+        success: true,
+        message: "category is updated successfully",
+        data: updatedParentCategory
+    });
+
 });
 
 
-export { createProduct, createCategory, getAllAdminProducts, createDeal, editDeals, editProduct, deleteProduct }
+export { createProduct, createCategory, getAllAdminProducts, createDeal, editDeals, editProduct, deleteProduct, editCategory }
