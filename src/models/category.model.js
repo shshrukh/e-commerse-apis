@@ -1,4 +1,4 @@
-import mongoose, { Schema, model} from "mongoose";
+import mongoose, { Schema, model } from "mongoose";
 
 
 
@@ -9,7 +9,7 @@ const categorySchema = new Schema({
         trim: true,
         lowercase: true
     },
-    slug:{
+    slug: {
         type: String,
         required: true,
         minLength: [3, "category should have at least three characters"],
@@ -24,13 +24,26 @@ const categorySchema = new Schema({
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        require: true
+        required: true
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false
+    },
+    deletedAt: {
+        type: Date,
+        default: null
+    },
+    deletedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
     }
 
-},{timestamps:true});
+}, { timestamps: true });
 
-categorySchema.index({name: 1});
-categorySchema.index({parentCategoryId: 1});
+categorySchema.index({ name: 1 });
+categorySchema.index({ parentCategoryId: 1 });
 
 const Category = model("Category", categorySchema);
 

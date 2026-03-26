@@ -225,5 +225,64 @@ const editCategory = AsyncHandler(async (req, res, next) => {
 });
 
 
+// @delete Category 
 
-export { createProduct, createCategory, getAllAdminProducts, createDeal, editDeals, editProduct, deleteProduct, editCategory }
+const deleteCategory = AsyncHandler(async(req, res, next)=>{
+    const categoryId = req.params.id;
+    const userId= req.user._id;
+
+    const existingCategory = await Category.findById(categoryId);
+    if(!existingCategory || existingCategory.isDeleted){
+        return next(new CustomError(404, "category not found"));
+    }
+
+    const productExists = await Product.exists({category: categoryId});
+    if(productExists){
+        return next(new CustomError(400, "Category have a product. Reassign or remove the product first"))
+    }
+
+    const childrenExists = await Category.exists({parentCategoryId: categoryId, isDeleted: false});
+
+    if(childrenExists){
+        return next(new CustomError(400, "Category have subCategory. Handle them befor deleating"))
+    }
+
+    existingCategory.isDeleted =  true;
+    existingCategory.deletedAt =  Date.now();
+    existingCategory.deletedBy = userId;
+
+
+    const updateCategory = await existingCategory.save();
+
+    if(!updateCategory){
+        return next (new CustomError(500, "Failed to delete the category please try again letter"))
+    }
+
+    res.status(200).json({
+        success: true,
+        message: "Category is deleted successfully"
+    })
+
+});
+
+
+//@ delete deal
+const deleteDeal = AsyncHandler(async(req, res, next)=>{
+    const id = req.params.id;
+    if (!id){
+        return next(new CustomError(404, "id is not define"));
+    }
+    const deal = await Deal.findByIdAndDelete(id);
+
+    if(!deal){
+        return next(new CustomError(500, "con't delete the deal please try agian letter"));
+    }
+
+    res.status(200).json({
+        success: true,
+        message: "deal is deleated successfully"
+    })
+});
+
+
+export { createProduct, createCategory, getAllAdminProducts, createDeal, editDeals, editProduct, deleteProduct, editCategory, deleteCategory, deleteDeal}
