@@ -180,27 +180,50 @@ const deleteProduct = AsyncHandler(async (req, res, next) => {
 });
 
 //@ eidt category 
-const editCategory = AsyncHandler(async (req, res, next) => {
-    const { name, slug } = req.body;
-    const id = req.params.id;
 
-    const updatedParentCategory = await Category.findByIdAndUpdate(
+const editCategory = AsyncHandler(async (req, res, next) => {
+    const { name, slug, parentCategoryId } = req.body;
+    const id = req.params.id;
+    const userId = req.user._id;
+
+    const category = await Category.findById(id);
+    if (!category) {
+        return next(new CustomError(404, "Category not found"));
+    }
+
+    const updateData = {};
+
+    updateData.name = name;
+    updateData.slug = slug;
+
+    if (parentCategoryId !== undefined) {
+
+        if (parentCategoryId === id) {
+            return next(new CustomError(400, "Category cannot be its own parent"));
+        }
+        if (parentCategoryId !== null) {
+            const parentExists = await Category.findById(parentCategoryId);
+            if (!parentExists) {
+                return next(new CustomError(404, "Parent category not found"));
+            }
+        }
+
+        updateData.parentCategoryId = parentCategoryId;
+    }
+
+    const updatedCategory = await Category.findByIdAndUpdate(
         id,
-        { name, slug , parentCategoryId: id, createdBy: user._id},
+        updateData,
         { new: true }
     );
 
-    if (!updatedParentCategory) {
-        return next(new CustomError(404, "can't find the parent category"));
-    }
-
     res.status(200).json({
         success: true,
-        message: "category is updated successfully",
-        data: updatedParentCategory
+        message: "Category updated successfully",
+        data: updatedCategory
     });
-
 });
+
 
 
 export { createProduct, createCategory, getAllAdminProducts, createDeal, editDeals, editProduct, deleteProduct, editCategory }
