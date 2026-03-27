@@ -1,10 +1,10 @@
-import { check, success } from "zod";
 import AsyncHandler from "../handlers/AsyncHandler.js";
 import CustomError from "../handlers/CustomError.js";
 import Category from "../models/category.model.js";
 import { Product } from "../models/product.model.js";
 import mongoose from "mongoose";
 import { Deal } from "../models/deals.model.js";
+
 
 
 
@@ -227,35 +227,35 @@ const editCategory = AsyncHandler(async (req, res, next) => {
 
 // @delete Category 
 
-const deleteCategory = AsyncHandler(async(req, res, next)=>{
+const deleteCategory = AsyncHandler(async (req, res, next) => {
     const categoryId = req.params.id;
-    const userId= req.user._id;
+    const userId = req.user._id;
 
     const existingCategory = await Category.findById(categoryId);
-    if(!existingCategory || existingCategory.isDeleted){
+    if (!existingCategory || existingCategory.isDeleted) {
         return next(new CustomError(404, "category not found"));
     }
 
-    const productExists = await Product.exists({category: categoryId});
-    if(productExists){
+    const productExists = await Product.exists({ category: categoryId });
+    if (productExists) {
         return next(new CustomError(400, "Category have a product. Reassign or remove the product first"))
     }
 
-    const childrenExists = await Category.exists({parentCategoryId: categoryId, isDeleted: false});
+    const childrenExists = await Category.exists({ parentCategoryId: categoryId, isDeleted: false });
 
-    if(childrenExists){
+    if (childrenExists) {
         return next(new CustomError(400, "Category have subCategory. Handle them befor deleating"))
     }
 
-    existingCategory.isDeleted =  true;
-    existingCategory.deletedAt =  Date.now();
+    existingCategory.isDeleted = true;
+    existingCategory.deletedAt = Date.now();
     existingCategory.deletedBy = userId;
 
 
     const updateCategory = await existingCategory.save();
 
-    if(!updateCategory){
-        return next (new CustomError(500, "Failed to delete the category please try again letter"))
+    if (!updateCategory) {
+        return next(new CustomError(500, "Failed to delete the category please try again letter"))
     }
 
     res.status(200).json({
@@ -267,22 +267,87 @@ const deleteCategory = AsyncHandler(async(req, res, next)=>{
 
 
 //@ delete deal
-const deleteDeal = AsyncHandler(async(req, res, next)=>{
+const deleteDeal = AsyncHandler(async (req, res, next) => {
     const id = req.params.id;
-    if (!id){
+    if (!id) {
         return next(new CustomError(404, "id is not define"));
     }
     const deal = await Deal.findByIdAndDelete(id);
 
-    if(!deal){
+    if (!deal) {
         return next(new CustomError(500, "con't delete the deal please try agian letter"));
     }
 
     res.status(200).json({
         success: true,
-        message: "deal is deleated successfully"
+        message: "Deal is deleated successfully"
     })
 });
 
+// @ get the product
 
-export { createProduct, createCategory, getAllAdminProducts, createDeal, editDeals, editProduct, deleteProduct, editCategory, deleteCategory, deleteDeal}
+const getProduct = AsyncHandler(async (req, res, next) => {
+    const id = req.params.id;
+    if(!mongoose.Types.ObjectId.isValid(id)){
+        return next(new CustomError(400, "Invalid product ID"))
+    }
+
+
+    const product = await Product.findById(id)
+        .select("_id name price stock isActive activeDeal");
+
+    if (!product) {
+        return next(new CustomError(404, "Product not found"));
+    }
+    res.status(200).json({
+        success: true,
+        message: "Product fetched successfully",
+        product
+    });
+
+});
+
+// @ get the deal
+
+const getDeal = AsyncHandler(async(req, res, next)=>{
+    const id = req.params.id;
+    if(!mongoose.Types.ObjectId.isValid(id)){
+        return next(new CustomError(400, "Invalid deal ID"))
+    }
+    const deal = await Deal.findById(id).select("Discount startDate endDate");
+
+    if(!deal){
+        return next(new CustomError(404, "Deal not found"))
+    }
+
+    res.status(200).json({
+        success: true,
+        message: "Deal fetched successfully",
+        deal
+    });
+});
+
+//@ get the category 
+
+const getCategory = AsyncHandler(async(req, res, next)=>{
+    const id = req.params.id;
+    if(!mongoose.Types.ObjectId.isValid(id)){
+        return next(new CustomError(400, "Invalid Category ID"));
+    }
+     
+    const category = await Category.findById(id).select("name slug");
+
+    if(!category){
+        return next(new CustomError(404, "Categoy is found"));
+    }
+    res.status(200).json({
+        sucess: true,
+        message: "Category fetched successfully",
+        category
+    });
+
+
+});
+
+
+export { createProduct, createCategory, getAllAdminProducts, createDeal, editDeals, editProduct, deleteProduct, editCategory, deleteCategory, deleteDeal, getProduct, getDeal , getCategory}
