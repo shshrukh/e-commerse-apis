@@ -4,6 +4,7 @@ import Category from "../models/category.model.js";
 import { Product } from "../models/product.model.js";
 import mongoose from "mongoose";
 import { Deal } from "../models/deals.model.js";
+import { ja } from "zod/locales";
 
 
 
@@ -85,9 +86,12 @@ const getAllAdminProducts = AsyncHandler(async (req, res) => {
 const createDeal = AsyncHandler(async (req, res, next) => {
     const { discount, startDate, endDate } = req.body;
     const user = req.user;
-    const productId = req.params.id;
+    const productId = req.params.productId;
 
     // console.log(productId,"this is product mongodb id");    // cheking the product ID;
+    if(!mongoose.Types.ObjectId.isValid(productId)){
+        return next(new CustomError(400, "Invalid product ID"))
+    }
 
     const product = await Product.findById(productId);
     if (!product) {
@@ -103,7 +107,7 @@ const createDeal = AsyncHandler(async (req, res, next) => {
 
     const deal = await Deal.create({ discount, startDate, endDate, user: user._id, product: productId });
     if (!deal) {
-        return next(new CustomError(404, "deal is not created"));
+        return next(new CustomError(500, "Failed to create the deal. Please try again letter"));
     }
     await Product.findByIdAndUpdate(productId, { activeDeal: deal._id });
 
@@ -118,14 +122,25 @@ const createDeal = AsyncHandler(async (req, res, next) => {
 // edit paroduct Deals controller
 const editDeals = AsyncHandler(async (req, res, next) => {
 
-    const productId = req.params.id;
+    const productId = req.params.productId;
+    const dealId = req.params.id;
     const { discount, startDate, endDate } = req.body;
+
+    (!mongoose.Types.ObjectId.isValid(productId)) && next(new CustomError(400, "Invalid product ID"));
+    (!mongoose.Types.ObjectId.isValid(dealId)) && next(new CustomError(400, "Invalid deal ID"));
+
     const product = await Product.findById(productId);
     if (!product) {
         return next(new CustomError(404, 'product not exists'));
     }
+
+    const existingDeal = await Deal.findById(dealId);
+    if (!existingDeal) {
+        return next(new CustomError(404, "deal not found. Create the deal first."));
+    }
+
     const deal = await Deal.findOneAndUpdate(
-        { product: productId },               // filter → find the deal by product
+        { _id: dealId },               // filter → find the deal by its own ID
         { discount, startDate, endDate },     // update → fields to update
         {
             returnDocument: "after",  // instead of `new: true`
@@ -148,6 +163,11 @@ const editDeals = AsyncHandler(async (req, res, next) => {
 const editProduct = AsyncHandler(async (req, res, next) => {
     const productId = req.params.id;
     const { name, price, stoke, isActive, category } = req.body;
+
+    if(!mongoose.Types.ObjectId.isValid(productId)){
+        return next(new CustomError(400, "Invalid product ID"))
+    }
+
     const product = await Product.findByIdAndUpdate(productId, { name, price, stoke, isActive, category }, { returnDocument: "after", runValidators: true });
 
     if (!product) {
@@ -184,8 +204,7 @@ const deleteProduct = AsyncHandler(async (req, res, next) => {
 const editCategory = AsyncHandler(async (req, res, next) => {
     const { name, slug, parentCategoryId } = req.body;
     const id = req.params.id;
-    const userId = req.user._id;
-
+    
     const category = await Category.findById(id);
     if (!category) {
         return next(new CustomError(404, "Category not found"));
@@ -241,10 +260,10 @@ const deleteCategory = AsyncHandler(async (req, res, next) => {
         return next(new CustomError(400, "Category have a product. Reassign or remove the product first"))
     }
 
-    const childrenExists = await Category.exists({ parentCategoryId: categoryId, isDeleted: false });
+    const parentCategoryExists = await Category.exists({ parentCategoryId: categoryId, isDeleted: false });
 
-    if (childrenExists) {
-        return next(new CustomError(400, "Category have subCategory. Handle them befor deleating"))
+    if (parentCategoryExists) {
+        return next(new CustomError(400, "Category have Subcategory. Handle them befor deleating"))
     }
 
     existingCategory.isDeleted = true;
@@ -268,14 +287,27 @@ const deleteCategory = AsyncHandler(async (req, res, next) => {
 
 //@ delete deal
 const deleteDeal = AsyncHandler(async (req, res, next) => {
-    const id = req.params.id;
-    if (!id) {
-        return next(new CustomError(404, "id is not define"));
-    }
-    const deal = await Deal.findByIdAndDelete(id);
+    const productId = req.params.productId;
+    const dealId = req.params.id;
 
-    if (!deal) {
-        return next(new CustomError(500, "con't delete the deal please try agian letter"));
+    (!mongoose.Types.ObjectId.isValid(productId)) && next(new CustomError(400, "Invalid the product ID"));
+    (!mongoose.Types.ObjectId.isValid(dealId))  && next(new CustomError(400, "Invalid the deal ID"));
+    
+
+    const product =await Product.findById(productId);
+
+    if(!product){
+        return next(new CustomError(400, "Product is not found"));
+    }
+
+    const deal = await Deal.findById(dealId);
+    if(!deal){
+        return next(new CustomError(400, "Can't find the deal"));
+    }
+    
+    const deleteDeal = await Deal.findByIdAndDelete(dealId)
+    if(!deleteDeal) {
+        return next(new CustomError(500, "Failed to delete the deal plese try again letter."))
     }
 
     res.status(200).json({
@@ -310,20 +342,27 @@ const getProduct = AsyncHandler(async (req, res, next) => {
 // @ get the deal
 
 const getDeal = AsyncHandler(async(req, res, next)=>{
-    const id = req.params.id;
-    if(!mongoose.Types.ObjectId.isValid(id)){
-        return next(new CustomError(400, "Invalid deal ID"))
-    }
-    const deal = await Deal.findById(id).select("Discount startDate endDate");
+    const productId = req.params.productId;
+    const dealId = req.params.id;
 
-    if(!deal){
+    (!mongoose.Types.ObjectId.isValid(productId)) && next(new CustomError(400, "Invalid product ID"));
+    (!mongoose.Types.ObjectId.isValid(dealId)) && next(new CustomError(400, "Invalid deal ID"));
+
+    const existingProduct = await Product.findById(productId);
+    if(existingProduct){
+        return next( new CustomError(404, "Product is not not found"));
+    }
+
+    const existingDeal = await Deal.findById(dealId).select("Discount startDate endDate");
+
+    if(!existingDeal){
         return next(new CustomError(404, "Deal not found"))
     }
 
     res.status(200).json({
         success: true,
         message: "Deal fetched successfully",
-        deal
+        existingDeal
     });
 });
 

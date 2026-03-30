@@ -10,19 +10,23 @@ import { productSchema } from "../schemas/product.js";
 
 
 const adminRoute = Router();
-
-adminRoute.route("/verify-category").post(validateZodSchema(createCategorySchema), authMiddleware,  allowRoles("admin"), createCategory);
-adminRoute.route('/edit-category/:id').patch(validateZodSchema(createCategorySchema), authMiddleware, allowRoles("admin"), editCategory);
-adminRoute.route('/delete-category/:id').delete(authMiddleware, allowRoles("admin"), deleteCategory);
+//products
 adminRoute.route('/products').get(authMiddleware, allowRoles('admin'), getAllAdminProducts);
-adminRoute.route('/delete-product/:id').delete(authMiddleware, allowRoles('admin'),deleteProduct);
-adminRoute.route('/edit-product/:id').patch(validateZodSchema(productSchema),authMiddleware, allowRoles('admin'), editProduct);
-adminRoute.route('/products/:id/deals').post(validateZodSchema(productDealSchema),authMiddleware, allowRoles('admin'), createDeal);
-adminRoute.route('/edit-product/:id').post(validateZodSchema(productDealSchema), authMiddleware,allowRoles('admin'), editDeals ); 
-adminRoute.route('/delete-deals/:id').delete(authMiddleware, allowRoles("admin"), deleteDeal);
-adminRoute.route('/product/:id').get( authMiddleware, allowRoles("admin"), getProduct);
-adminRoute.route('/deal/:id').get(authMiddleware, allowRoles("admin"), getDeal);
-adminRoute.route('/category/:id').get(authMiddleware, allowRoles("admin"), getCategory);
+adminRoute.route('/products/:id').get( authMiddleware, allowRoles("admin"), getProduct);
+adminRoute.route('/products/:id').patch(validateZodSchema(productSchema),authMiddleware, allowRoles('admin'), editProduct);
+adminRoute.route('/products/:id').delete(authMiddleware, allowRoles('admin'),deleteProduct);
+
+//category
+adminRoute.route("/categories").post(validateZodSchema(createCategorySchema), authMiddleware,  allowRoles("admin"), createCategory);
+adminRoute.route('/categories/:id').patch(validateZodSchema(createCategorySchema), authMiddleware, allowRoles("admin"), editCategory);
+adminRoute.route('/categories/:id').delete(authMiddleware, allowRoles("admin"), deleteCategory);
+adminRoute.route('/categories/:id').get(authMiddleware, allowRoles("admin"), getCategory);
+
+//Deals
+adminRoute.route('/products/:productId/deals').post(validateZodSchema(productDealSchema),authMiddleware, allowRoles('admin'), createDeal);
+adminRoute.route('/products/:productId/deals/:id').patch(validateZodSchema(productDealSchema), authMiddleware,allowRoles('admin'), editDeals ); 
+adminRoute.route('/products/:productId/deals/:id').delete(authMiddleware, allowRoles("admin"), deleteDeal);
+adminRoute.route('/products/:productId/deals/:id').get(authMiddleware, allowRoles("admin"), getDeal);
 
 
 
