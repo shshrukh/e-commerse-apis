@@ -349,7 +349,7 @@ const getDeal = AsyncHandler(async(req, res, next)=>{
     (!mongoose.Types.ObjectId.isValid(dealId)) && next(new CustomError(400, "Invalid deal ID"));
 
     const existingProduct = await Product.findById(productId);
-    if(existingProduct){
+    if(!existingProduct){
         return next( new CustomError(404, "Product is not not found"));
     }
 
