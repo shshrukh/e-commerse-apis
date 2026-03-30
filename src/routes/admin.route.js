@@ -3,7 +3,7 @@ import { validateZodSchema } from "../middlewares/validateZodSchema.middleware.j
 import { createCategorySchema } from "../schemas/createCategory.js";
 import { allowRoles } from "../middlewares/allowRole.middleware.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
-import { deleteProduct, editProduct, getAllAdminProducts, getProduct } from "../controllers/product.controller.js";
+import { createProduct, deleteProduct, editProduct, getAllAdminProducts, getProduct } from "../controllers/product.controller.js";
 import { getCategory, deleteCategory, createCategory, editCategory } from "../controllers/category.controller.js"
 import { createDeal, deleteDeal, getDeal, editDeals } from "../controllers/deal.controller.js"
 import { productDealSchema } from "../schemas/editPorductDeal.js";
@@ -15,7 +15,9 @@ const adminRoute = Router();
 
 adminRoute.use(authMiddleware, allowRoles("admin"));
 //products
-adminRoute.route('/products').get( getAllAdminProducts );
+adminRoute.route('/products')
+    .get( getAllAdminProducts )
+    .post( createProduct);
 
 adminRoute.route('/products/:productId')
     .get( getProduct )
