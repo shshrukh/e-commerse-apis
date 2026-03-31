@@ -51,6 +51,7 @@
       }
   },{timestamps: true});
 
+  dealSchema.index({orduct: 1})
 
   const Deal =  model("Deal", dealSchema)
 

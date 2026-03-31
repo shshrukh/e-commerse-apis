@@ -4,6 +4,10 @@ const PORT = process.env.PORT || 4000;
 
 
 
+
+//  server gracefullt shutdown 
+//   unhadnled promise  exception handle 
+
 connectDB()
     .then(()=>{
         app.listen(PORT, ()=>{

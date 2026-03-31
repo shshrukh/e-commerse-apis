@@ -4,14 +4,10 @@ import { addProfile, currentUser, registerUser, verifyEmail } from "../controlle
 import { userRegisterSchema } from "../schemas/userRegister.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 import { imageMulter} from "../middlewares/multerImage.middleware.js";
-import { profileSchema } from "../schemas/profile.js";
-
-
 
 const userRouter = Router();
 
 const uploadImage = imageMulter(5, ["image/png" , "image/jpeg" , "image/gif", "image/jpg"]);
-
 
 userRouter.route('/register').post(validateZodSchema(userRegisterSchema), registerUser);
 userRouter.route('/verify-email/:token').get( verifyEmail);

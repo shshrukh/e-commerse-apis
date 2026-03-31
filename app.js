@@ -11,6 +11,8 @@ import { adminRoute } from "./src/routes/admin.route.js";
 import "./src/events/index.js"; // Initialize event listeners
 import multer from "multer";
 
+// use helmet 
+// mongo sanitizer 
 
 dotenv.config();
 
