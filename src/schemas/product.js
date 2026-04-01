@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { productDealSchema } from "./editPorductDeal.js";
 
 
 export const productSchema = z.object({
@@ -7,10 +8,5 @@ export const productSchema = z.object({
     stock: z.number(),
     isActive: z.boolean(),
     category: z.string().min(24, "user id must have 24 digits number"),
-    deals: z.object({
-        user: z.string().min(24, "user id must have 24 characters"),
-        discount: z.number().min(0).max(100, "discount must be between 0 and 100"),
-        startDate: z.date().optional(),
-        endDate: z.date().optional()
-    }).optional()
+    deals: productDealSchema.optional()
 })
