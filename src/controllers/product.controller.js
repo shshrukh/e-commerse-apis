@@ -6,43 +6,98 @@ import { Deal } from "../models/deals.model.js";
 
 
 
+
+//@ get all admin products
+const getAllAdminProducts = AsyncHandler(async (req, res) => {
+    const user = req.user;
+    const {page = 1, limit = 10} = req.query;
+
+    const totalProducts = await Product.countDocuments({user: user._id});
+
+    const products = await Product.find({ user: user._id , isActive: true})
+        .select("name price stock isActive activeDeal") // include only these
+        .populate({
+            path: "activeDeal",
+            select: "discount startDate endDate user"
+        })
+        .limit(Number(limit))
+        .skip((page - 1)* limit)
+        .lean();
+    const meta = {
+        page,
+        limit,
+        totalProducts, 
+        totalPages: Math.ceil(totalProducts / limit)
+    };
+
+    res.status(200).json({
+        success: true,
+        message: "Products fetched successfully",
+        data: { products },
+        meta
+    });
+});
+
 // @ create Product controller
 
 const createProduct = AsyncHandler(async (req, res, next) => {
     const { name, price, stock, category, isActive, deals } = req.body;
     const user = req.user;
-    if (deals) {
-        const product = await Product.create({ name, price, stock, user: user.id, category, isActive });
+
+    if(deals){
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try {
+            const { discount, startDate, endDate} = req.body.deals;
+            const [ product ]= await Product.create([{
+                name,
+                price,
+                stock,
+                category,
+                isActive,
+                user: user._id
+            }],{session});
+            const [deal] = await Deal.create([{
+                discount,
+                startDate,
+                endDate,
+                product: product._id,
+                user: user._id
+            }],{session});
+            product.activeDeal = deal._id;
+            console.log(deal);
+            
+            await product.save({session})
+            await session.commitTransaction();
+
+            res.status(201).json({
+                success: true,
+                message: "Product is created successfully.",
+                data: { product }
+            })
+        } catch (error) {
+            await session.abortTransaction();
+            console.log(error, "the error");
+            
+            return next(error instanceof CustomError ? error: new CustomError(500, "Failed to create a product"));
+        }finally{
+            session.endSession();
+        }
+    }else{
+
+        const product = await Product.create({name, price, stock, category, isActive, user: user._id});
+    
+        if(!product){
+            return next(new CustomError(500, "Failed to create the product."));
+        }
+    
+        res.status(201).json({
+            success: true,
+            message: "Product is created successfuly",
+            data: { product }
+        })
     }
-    const product = await Product.create({ name, price, stock, user: user.id, category, isActive });
-    if (!product) {
-        return next(new CustomError(500, "failed to create product"))
-    };
-
-    res.status(201).json({
-        success: true,
-        message: "product is created successfuly",
-        product
-    })
-});
-
-
-//@ get all admin products
-const getAllAdminProducts = AsyncHandler(async (req, res) => {
-    const user = req.user;
-
-    const products = await Product.find({ user: user._id })
-        .select("name price stock isActive activeDeal") // include only these
-        .populate({
-            path: "activeDeal",
-            select: "discount startDate endDate user"
-        });
-
-    res.status(200).json({
-        success: true,
-        message: "Products fetched successfully",
-        products
-    });
+    
 });
 
 
