@@ -12,7 +12,8 @@ const uploadImage = imageMulter(5, ["image/png" , "image/jpeg" , "image/gif", "i
 userRouter.route('/register').post(validateZodSchema(userRegisterSchema), registerUser);
 userRouter.route('/verify-email/:token').get( verifyEmail);
 userRouter.route('/add-profile').post(authMiddleware ,uploadImage.single("image"), addProfile);
-userRouter.route('/get-user').get(authMiddleware, currentUser)
+userRouter.route('/get-user').get(authMiddleware, currentUser);
+
 
 
 export { userRouter }

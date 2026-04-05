@@ -8,7 +8,7 @@ import { allowRoles } from "../middlewares/allowRole.middleware.js";
 
 const productRoute = Router();
 
-
+productRoute.route('/all-products').get(authMiddleware, )
 
 
 

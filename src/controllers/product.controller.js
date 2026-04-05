@@ -6,6 +6,8 @@ import { Deal } from "../models/deals.model.js";
 import Category from "../models/category.model.js";
 import { fileTypeFromBuffer } from "file-type";
 import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
+import User from "../models/user.models.js";
+import { success } from "zod";
 
 
 
@@ -46,11 +48,11 @@ const getAllAdminProducts = AsyncHandler(async (req, res) => {
 
 const createProduct = AsyncHandler(async (req, res, next) => {
 
-    const { name, price, stock, isActive, category, deals, discription} = req.body
+    const { name, price, stock, isActive, category, deals, discription } = req.body
     console.log(name, price, stock, isActive, category, deals, discription);
     const files = req.files;
     console.log(files);
-    
+
     const user = req.user;
 
     const productImage = [];
@@ -206,6 +208,42 @@ const getProduct = AsyncHandler(async (req, res, next) => {
 
 });
 
+const getAllProducts = AsyncHandler(async (req, res, next) => {
+    const admin = await User.findOne({ role: "admin" });
+
+    if (!admin) {
+        return next(new CustomError(404, "No admin found"));
+    }
+
+    const data = await Product.find({ user: admin._id });
+
+    if (!data || data.length === 0) {
+        return next(new CustomError(404, "No products found for admin"));
+    }
+
+    res.status(200).json({
+        success: true,
+        data
+    });
+});
 
 
-export { createProduct, getAllAdminProducts, editProduct, deleteProduct, getProduct }
+const getAdminStats = async (req, res, next) => {
+
+    const productCount = await Product.countDocuments();
+    const categoryCount = await Category.countDocuments();
+    const dealCount = await Deal.countDocuments();
+
+    res.status(200).json({
+        success: true,
+        data: {
+            products: productCount,
+            categories: categoryCount,
+            deals: dealCount
+        }
+    })
+};
+
+
+
+export { createProduct, getAllAdminProducts, editProduct, deleteProduct, getProduct, getAdminStats, getAllProducts }

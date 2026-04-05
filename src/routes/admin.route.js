@@ -3,7 +3,7 @@ import { validateZodSchema } from "../middlewares/validateZodSchema.middleware.j
 import { createCategorySchema } from "../schemas/createCategory.js";
 import { allowRoles } from "../middlewares/allowRole.middleware.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
-import { createProduct, deleteProduct, editProduct, getAllAdminProducts, getProduct } from "../controllers/product.controller.js";
+import { createProduct, deleteProduct, editProduct, getAdminStats, getAllAdminProducts, getProduct } from "../controllers/product.controller.js";
 import { getCategory, deleteCategory, createCategory, editCategory } from "../controllers/category.controller.js"
 import { createDeal, deleteDeal, getDeal, editDeals } from "../controllers/deal.controller.js"
 import { productDealSchema } from "../schemas/editPorductDeal.js";
@@ -19,6 +19,7 @@ const uploadImages = imageMulter(5, ["image/png" , "image/jpeg" , "image/gif", "
 
 adminRoute.use(authMiddleware, allowRoles("admin"));
 //products
+
 adminRoute.route('/products')
     .get( getAllAdminProducts )
     .post( uploadImages.array("images", 3),parsedData ,validateZodSchema(productSchema),createProduct);
@@ -43,7 +44,7 @@ adminRoute.route('/products/:productId/deals/:dealId')
     .patch( validateZodSchema(productDealSchema), editDeals )
     .delete( deleteDeal )
     .get( getDeal );
-
-
+// get the admin products status
+adminRoute.route("/status").get(getAdminStats)
 
 export { adminRoute }
