@@ -3,6 +3,10 @@ import CustomError from "../handlers/CustomError.js";
 import { Product } from "../models/product.model.js";
 import mongoose from "mongoose";
 import { Deal } from "../models/deals.model.js";
+import Category from "../models/category.model.js";
+import { fileTypeFromBuffer } from "file-type";
+import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
+
 
 
 
@@ -10,23 +14,23 @@ import { Deal } from "../models/deals.model.js";
 //@ get all admin products
 const getAllAdminProducts = AsyncHandler(async (req, res) => {
     const user = req.user;
-    const {page = 1, limit = 10} = req.query;
+    const { page = 1, limit = 10 } = req.query;
 
-    const totalProducts = await Product.countDocuments({user: user._id});
+    const totalProducts = await Product.countDocuments({ user: user._id });
 
-    const products = await Product.find({ user: user._id , isActive: true})
+    const products = await Product.find({ user: user._id, isActive: true })
         .select("name price stock isActive activeDeal") // include only these
         .populate({
             path: "activeDeal",
             select: "discount startDate endDate user"
         })
         .limit(Number(limit))
-        .skip((page - 1)* limit)
+        .skip((page - 1) * limit)
         .lean();
     const meta = {
         page,
         limit,
-        totalProducts, 
+        totalProducts,
         totalPages: Math.ceil(totalProducts / limit)
     };
 
@@ -41,33 +45,69 @@ const getAllAdminProducts = AsyncHandler(async (req, res) => {
 // @ create Product controller
 
 const createProduct = AsyncHandler(async (req, res, next) => {
-    const { name, price, stock, category, isActive, deals } = req.body;
+
+    const { name, price, stock, isActive, category, deals, discription} = req.body
+    console.log(name, price, stock, isActive, category, deals, discription);
+    const files = req.files;
+    console.log(files);
+    
     const user = req.user;
 
-    if(deals){
+    const productImage = [];
+
+    for (const file of files) {
+        const detectedType = await fileTypeFromBuffer(file.buffer);
+
+        if (!detectedType || !["image/jpeg", "image/png"].includes(detectedType.mime)) {
+            return next(new CustomError(400, "Invalid image file"));
+        }
+
+        try {
+            const result = await uploadToCloudinary({
+                resource_type: "image",
+                buffer: file.buffer,
+                folder: "E-commerce_products",
+                transformation: [{ quality: "auto" }]
+            });
+
+            productImage.push(result.secure_url);
+        } catch (error) {
+            return next(new CustomError(500, "Cloudinary upload failed"));
+        }
+    }
+
+    const existingCategory = await Category.findById(category);
+    if (!existingCategory) {
+        return next(new CustomError(400, "Create the category before creating product first."));
+    }
+
+    if (deals) {
         const session = await mongoose.startSession();
         session.startTransaction();
         try {
-            const { discount, startDate, endDate} = req.body.deals;
-            const [ product ]= await Product.create([{
+            const { discount, startDate, endDate } = req.body.deals;
+            const product = await Product.create({
                 name,
                 price,
                 stock,
                 category,
                 isActive,
+                discription,
+                images: productImage,
                 user: user._id
-            }],{session});
-            const [deal] = await Deal.create([{
+            });
+
+            const deal = await Deal.create({
                 discount,
                 startDate,
                 endDate,
                 product: product._id,
                 user: user._id
-            }],{session});
+            });
             product.activeDeal = deal._id;
             console.log(deal);
-            
-            await product.save({session})
+
+            await product.save({ session })
             await session.commitTransaction();
 
             res.status(201).json({
@@ -78,26 +118,26 @@ const createProduct = AsyncHandler(async (req, res, next) => {
         } catch (error) {
             await session.abortTransaction();
             console.log(error, "the error");
-            
-            return next(error instanceof CustomError ? error: new CustomError(500, "Failed to create a product"));
-        }finally{
+
+            return next(error instanceof CustomError ? new CustomError(500, "Failed to create a product") : error);
+        } finally {
             session.endSession();
         }
-    }else{
+    } else {
 
-        const product = await Product.create({name, price, stock, category, isActive, user: user._id});
-    
-        if(!product){
+        const product = await Product.create({ name, price, stock, category, isActive, user: user._id, images: productImage, discription });
+
+        if (!product) {
             return next(new CustomError(500, "Failed to create the product."));
         }
-    
+
         res.status(201).json({
             success: true,
             message: "Product is created successfuly",
             data: { product }
         })
     }
-    
+
 });
 
 
@@ -107,7 +147,7 @@ const editProduct = AsyncHandler(async (req, res, next) => {
     const productId = req.params.productId;
     const { name, price, stoke, isActive, category } = req.body;
 
-    if(!mongoose.Types.ObjectId.isValid(productId)){
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
         return next(new CustomError(400, "Invalid product ID"))
     }
 
@@ -145,8 +185,9 @@ const deleteProduct = AsyncHandler(async (req, res, next) => {
 // @ get the product
 
 const getProduct = AsyncHandler(async (req, res, next) => {
-    const id = req.params.id;
-    if(!mongoose.Types.ObjectId.isValid(id)){
+    const id = req.params.productId;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
         return next(new CustomError(400, "Invalid product ID"))
     }
 

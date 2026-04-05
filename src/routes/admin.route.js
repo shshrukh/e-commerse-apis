@@ -8,16 +8,20 @@ import { getCategory, deleteCategory, createCategory, editCategory } from "../co
 import { createDeal, deleteDeal, getDeal, editDeals } from "../controllers/deal.controller.js"
 import { productDealSchema } from "../schemas/editPorductDeal.js";
 import { productSchema } from "../schemas/product.js";
+import { imageMulter } from "../middlewares/multerImage.middleware.js";
+import { parsedData } from "../middlewares/dataParse.js";
 
 
 
 const adminRoute = Router();
 
+const uploadImages = imageMulter(5, ["image/png" , "image/jpeg" , "image/gif", "image/jpg"]);
+
 adminRoute.use(authMiddleware, allowRoles("admin"));
 //products
 adminRoute.route('/products')
     .get( getAllAdminProducts )
-    .post( createProduct);
+    .post( uploadImages.array("images", 3),parsedData ,validateZodSchema(productSchema),createProduct);
 
 adminRoute.route('/products/:productId')
     .get( getProduct )

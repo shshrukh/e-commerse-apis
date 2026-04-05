@@ -5,7 +5,7 @@ const generateAccessToken =  (user)=>{
     if(!user){
         throw new CustomError(404, "user is not defined to generate token")
     }
-    const token = jwt.sign({id: user._id}, process.env.JWT_ACCESS_SECRET, {expiresIn: "15m"});
+    const token = jwt.sign({id: user._id}, process.env.JWT_ACCESS_SECRET, {expiresIn: "15d"});
     return token;
 }
 
