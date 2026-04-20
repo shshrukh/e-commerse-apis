@@ -1,4 +1,5 @@
 function confirmRegistration(username, useremail, token) {
+    const verifyUrl = `http://localhost:8000/api/users/verify-email/${token}`
     return `
     <div style="
         font-family: Arial, sans-serif; 
@@ -17,7 +18,7 @@ function confirmRegistration(username, useremail, token) {
 
         <p>Get started by exploring your dashboard, connecting with other interns, and making the most out of our application.</p>
 
-        <a href="${process.env.APP_URL}" style="
+        <a href="${verifyUrl}" style="
             display: inline-block;
             padding: 10px 20px;
             margin-top: 20px;
@@ -25,11 +26,7 @@ function confirmRegistration(username, useremail, token) {
             color: white;
             text-decoration: none;
             border-radius: 5px;
-        ">Go to Dashboard</a>
-
-        <p style="margin-top: 30px; font-size: 12px; color: #888;">
-            http://localhost:8000/api/users/verify-email/${token}
-        </p>
+        ">Verify email</a>
 
         <p style="margin-top: 10px; font-size: 12px; color: #888;">
             © ${new Date().getFullYear()} UCONNECT INTERS. All rights reserved.

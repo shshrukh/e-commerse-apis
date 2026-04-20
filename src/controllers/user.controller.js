@@ -75,7 +75,7 @@ const verifyEmail = AsyncHandler(async (req, res, next) => {
 const addProfile = AsyncHandler(async (req, res, next) => {
     const file = req.file;
     const user = req.user;
-    
+
     const detectedType = await fileTypeFromBuffer(file.buffer);
 
     if (!detectedType || !["image/jpeg", "image/png"].includes(detectedType.mime)) {
@@ -110,7 +110,7 @@ const addProfile = AsyncHandler(async (req, res, next) => {
             },
         },
         { returnDocument: 'after', runValidators: true }
-        
+
     );
 
     if (!updatedUser) {
@@ -142,6 +142,50 @@ const currentUser = AsyncHandler(async (req, res, next) => {
     })
 });
 
+const userDetails = AsyncHandler(async (req, res, next) => {
+    const { name, contactNumber, city, country, zip } = req.body;
+    const user = req.user;
+    const updatedUser = await User.findByIdAndUpdate(
+        user.id,
+        {
+            name,
+            contactNumber,
+            addresses: {
+                city,
+                country,
+                zip,
+            }
+        },
+        { returnDocument: 'after', runValidators: true }
+    )
+    if (!updatedUser) {
+        return next(new CustomError(404, "User not found"));
+    }
+    return res.status(200).json({
+        success: true,
+        message: "User details updated successfully",
+        data: updatedUser
+    });
+});
+const changePassword = AsyncHandler(async (req, res, next) => {
+    const { oldPassword, newPassword } = req.body;
+
+    // console.log(oldPassword, newPassword);
+    const user = req.user;
+    const userDetails = await User.findById(req.user._id).select("+password");
+    const isPasswordCorrect = await userDetails.comparePassword(oldPassword);
+    // console.log(isPasswordCorrect);
+    if (!isPasswordCorrect) {
+        return next(new CustomError(400, "Invalid password"));
+    }
+    userDetails.password = newPassword;
+    await userDetails.save({ validateBeforeSave: false });
+    return res.status(200).json({
+        success: true,
+        message: "Password changed successfully",
+    });
+});
 
 
-export { registerUser, verifyEmail, addProfile, currentUser };
+
+export { registerUser, verifyEmail, addProfile, currentUser, userDetails, changePassword };

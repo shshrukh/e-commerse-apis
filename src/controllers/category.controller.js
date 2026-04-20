@@ -13,15 +13,15 @@ import CustomError from "../handlers/CustomError.js";
 
 //@ get the category 
 
-const getCategory = AsyncHandler(async(req, res, next)=>{
+const getCategory = AsyncHandler(async (req, res, next) => {
     const id = req.params.categoryId;
-    if(!mongoose.Types.ObjectId.isValid(id)){
+    if (!mongoose.Types.ObjectId.isValid(id)) {
         return next(new CustomError(400, "Invalid Category ID"));
     }
-     
+
     const category = await Category.findById(id).select("name slug");
 
-    if(!category){
+    if (!category) {
         return next(new CustomError(404, "Categoy is found"));
     }
     res.status(200).json({
@@ -38,7 +38,7 @@ const getCategory = AsyncHandler(async(req, res, next)=>{
 const editCategory = AsyncHandler(async (req, res, next) => {
     const { name, slug, parentCategoryId } = req.body;
     const categoryId = req.params.categoryId;
-    
+
     const category = await Category.findById(categoryId);
     if (!category) {
         return next(new CustomError(404, "Category not found"));
@@ -89,8 +89,8 @@ const createCategory = AsyncHandler(async (req, res, next) => {
         }
 
         const existingParentCategory = await Category.findById(parentCategoryId);
-
-
+        
+        
         if (!existingParentCategory) {
             return next(new CustomError(400, "Parent category is not avaliable"));
         }
@@ -130,12 +130,7 @@ const deleteCategory = AsyncHandler(async (req, res, next) => {
         return next(new CustomError(400, "Category have Subcategory. Handle them befor deleating"))
     }
 
-    existingCategory.isDeleted = true;
-    existingCategory.deletedAt = Date.now();
-    existingCategory.deletedBy = userId;
-
-
-    const updateCategory = await existingCategory.save();
+    const updateCategory = await Category.findByIdAndDelete(categoryId);
 
     if (!updateCategory) {
         return next(new CustomError(500, "Failed to delete the category please try again letter"))
@@ -151,4 +146,12 @@ const deleteCategory = AsyncHandler(async (req, res, next) => {
 
 
 
-export {getCategory, deleteCategory, createCategory, editCategory}
+const getAllCategories = AsyncHandler(async (req, res, next) => {
+    const categories = await Category.find({ isDeleted: { $ne: true } }).select("name slug parentCategoryId");
+    res.status(200).json({
+        success: true,
+        data: categories
+    });
+});
+
+export { getCategory, deleteCategory, createCategory, editCategory, getAllCategories }

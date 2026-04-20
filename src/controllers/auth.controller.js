@@ -12,6 +12,7 @@ const loginUser = AsyncHandler(async(req, res, next)=>{
     
     const user = await User.findOne({email}).select("+password");
     
+    // console.log(user);
     
     if(!user){
         return next(new CustomError(404, "user not found with this email"));
@@ -42,7 +43,8 @@ const loginUser = AsyncHandler(async(req, res, next)=>{
     }).status(200).json({
         success: true,
         message: "User logged in successfully",
-        accessToken
+        accessToken,
+        data: user
     })
     
 });
