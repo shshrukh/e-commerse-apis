@@ -36,7 +36,7 @@ const corsOptions = {
                 methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
                 credentials: true
             });
-        }else{
+        } else {
             return callback(null,
                 {
                     origin: true,
@@ -85,21 +85,21 @@ app.use(cookieParser());
 // implementing the auth routes
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/user', userRouter);
-app.use('/api/v1/porduct', productRoute);
+app.use('/api/v1/product', productRoute);
 app.use('/api/v1/admin', adminRoute)
 
 
 // multer middleware";
 
 app.use((err, req, res, next) => {
-  if (err instanceof multer.MulterError) {
-    return res.status(400).json({
-      success: false,
-      message: err.message,
-    });
-  }
+    if (err instanceof multer.MulterError) {
+        return res.status(400).json({
+            success: false,
+            message: err.message,
+        });
+    }
 
-  next(err);
+    next(err);
 });
 
 //implementing the error middleware

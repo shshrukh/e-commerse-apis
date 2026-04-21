@@ -7,7 +7,10 @@ import Category from "../models/category.model.js";
 import { fileTypeFromBuffer } from "file-type";
 import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
 import User from "../models/user.models.js";
-import { success } from "zod";
+
+function escapeRegExp(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 
 
@@ -16,11 +19,11 @@ import { success } from "zod";
 //@ get all admin products
 const getAllAdminProducts = AsyncHandler(async (req, res) => {
     const user = req.user;
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 100 } = req.query;
 
     const totalProducts = await Product.countDocuments({ user: user._id });
 
-    const products = await Product.find({ user: user._id, isActive: true })
+    const products = await Product.find({ user: user._id })
         .select("name price stock isActive activeDeal") // include only these
         .populate({
             path: "activeDeal",
@@ -115,7 +118,7 @@ const createProduct = AsyncHandler(async (req, res, next) => {
             res.status(201).json({
                 success: true,
                 message: "Product is created successfully.",
-                data: { product }
+                data: product
             })
         } catch (error) {
             await session.abortTransaction();
@@ -136,7 +139,7 @@ const createProduct = AsyncHandler(async (req, res, next) => {
         res.status(201).json({
             success: true,
             message: "Product is created successfuly",
-            data: { product }
+            data: product
         })
     }
 
@@ -147,20 +150,51 @@ const createProduct = AsyncHandler(async (req, res, next) => {
 
 const editProduct = AsyncHandler(async (req, res, next) => {
     const productId = req.params.productId;
-    const { name, price, stoke, isActive, category } = req.body;
+    const { name, price, stock, isActive, category, discription } = req.body;
+    const files = req.files;
 
     if (!mongoose.Types.ObjectId.isValid(productId)) {
         return next(new CustomError(400, "Invalid product ID"))
     }
 
-    const product = await Product.findByIdAndUpdate(productId, { name, price, stoke, isActive, category }, { returnDocument: "after", runValidators: true });
+    const updateData = { name, price, stock, isActive, category, discription };
+
+    // If new images are uploaded, handle them
+    if (files && files.length > 0) {
+        const productImage = [];
+        for (const file of files) {
+            const detectedType = await fileTypeFromBuffer(file.buffer);
+            if (!detectedType || !["image/jpeg", "image/png"].includes(detectedType.mime)) {
+                return next(new CustomError(400, "Invalid image file"));
+            }
+            try {
+                const result = await uploadToCloudinary({
+                    resource_type: "image",
+                    buffer: file.buffer,
+                    folder: "E-commerce_products",
+                    transformation: [{ quality: "auto" }]
+                });
+                productImage.push(result.secure_url);
+            } catch (error) {
+                return next(new CustomError(500, "Cloudinary upload failed"));
+            }
+        }
+        updateData.images = productImage;
+    }
+
+    const product = await Product.findByIdAndUpdate(
+        productId,
+        updateData,
+        { new: true, runValidators: true }
+    );
 
     if (!product) {
         return next(new CustomError(404, "Failed to update the product"))
     }
     res.status(200).json({
         success: true,
-        message: 'product is updated successfully.'
+        message: 'product is updated successfully.',
+        data: product
     })
 });
 
@@ -194,8 +228,7 @@ const getProduct = AsyncHandler(async (req, res, next) => {
     }
 
 
-    const product = await Product.findById(id)
-        .select("_id name price stock isActive activeDeal");
+    const product = await Product.findById(id).populate("activeDeal");
 
     if (!product) {
         return next(new CustomError(404, "Product not found"));
@@ -215,7 +248,7 @@ const getAllProducts = AsyncHandler(async (req, res, next) => {
         return next(new CustomError(404, "No admin found"));
     }
 
-    const data = await Product.find({ user: admin._id });
+    const data = await Product.find({ user: admin._id }).populate("activeDeal");
 
     if (!data || data.length === 0) {
         return next(new CustomError(404, "No products found for admin"));
@@ -224,6 +257,70 @@ const getAllProducts = AsyncHandler(async (req, res, next) => {
     res.status(200).json({
         success: true,
         data
+    });
+});
+
+// @ get products by name or slug (query params)
+const getProductsByNameOrSlug = AsyncHandler(async (req, res, next) => {
+    const { name, slug, page = 1, limit = 10 } = req.query;
+
+    const admin = await User.findOne({ role: "admin" });
+    if (!admin) {
+        return next(new CustomError(404, "No admin found"));
+    }
+
+    const filter = { user: admin._id, isActive: true };
+    const or = [];
+
+    if (name) {
+        const nameStr = String(name).trim();
+        if (nameStr) {
+            or.push({ name: { $regex: escapeRegExp(nameStr.toLowerCase()), $options: "i" } });
+        }
+    }
+
+    if (slug) {
+        let slugStr = String(slug).trim();
+        try {
+            slugStr = decodeURIComponent(slugStr);
+        } catch {
+            // ignore malformed URI sequences
+        }
+        slugStr = slugStr.toLowerCase().replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim();
+
+        if (slugStr) {
+            or.push({ name: slugStr });
+            or.push({ name: { $regex: escapeRegExp(slugStr), $options: "i" } });
+        }
+    }
+
+    if (or.length > 0) {
+        filter.$or = or;
+    }
+
+    const pageNum = Math.max(1, Number(page) || 1);
+    const limitNum = Math.min(50, Math.max(1, Number(limit) || 10));
+
+    const totalProducts = await Product.countDocuments(filter);
+
+    const products = await Product.find(filter)
+        .select("_id name price stock images discription isActive activeDeal category")
+        .populate({ path: "activeDeal", select: "discount startDate endDate" })
+        .populate({ path: "category", select: "name" })
+        .limit(limitNum)
+        .skip((pageNum - 1) * limitNum)
+        .lean();
+
+    res.status(200).json({
+        success: true,
+        message: "Products fetched successfully",
+        data: { products },
+        meta: {
+            page: pageNum,
+            limit: limitNum,
+            totalProducts,
+            totalPages: Math.ceil(totalProducts / limitNum)
+        }
     });
 });
 
@@ -246,4 +343,4 @@ const getAdminStats = async (req, res, next) => {
 
 
 
-export { createProduct, getAllAdminProducts, editProduct, deleteProduct, getProduct, getAdminStats, getAllProducts }
+export { createProduct, getAllAdminProducts, editProduct, deleteProduct, getProduct, getAdminStats, getAllProducts, getProductsByNameOrSlug }
